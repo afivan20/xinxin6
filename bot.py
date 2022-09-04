@@ -1,5 +1,6 @@
 from dotenv import dotenv_values
 from telegram.ext import Updater, CommandHandler
+
 from lingoace_api import extract_data_lingoace
 from qkid_api import extract_data_qkid
 from datetime import datetime, timedelta
@@ -83,7 +84,9 @@ def tomorrow(update, context):
     chat = update.effective_chat
     today = datetime.utcnow().today()
     since_monday = (today - timedelta(days=(today.weekday()+1))).date()
-    tomorrow = today + timedelta(days=1)
+    tomorrow = today + timedelta(days=1) # что если завтра Понедельник, а значит новая неделя
+    if tomorrow.weekday() == 0:
+        since_monday = today.date()
     try:
         lingo = extract_data_lingoace(since=since_monday, day=tomorrow)
     except Exception as e:
@@ -186,5 +189,4 @@ updater.dispatcher.add_handler(CommandHandler('next_week', next_week))
 if __name__ == '__main__':
     updater.start_polling()
     updater.idle()
-
 
