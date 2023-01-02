@@ -9,6 +9,7 @@ env = dotenv_values(os.path.join(DIR, '.env'))
 
 TEMP = {'token_lingo': None, 'token_QK': None}
 
+logger = logging.getLogger(__name__)
 
 async def get_token_lingo():
     url = 'https://teacher.lingoace.com/api/user/login'
@@ -18,10 +19,13 @@ async def get_token_lingo():
         'plainPassword': env['password'],
         'role': env['role']
     }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload, ssl=False) as resp:
-            token =  await resp.json()
-            TEMP['token_lingo'] = token['data']['jwtToken']
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, ssl=False) as resp:
+                token =  await resp.json()
+                TEMP['token_lingo'] = token['data']['jwtToken']
+    except Exception as e:
+        logger.exception(f"Не пришел токен get_token_lingo(){resp}\n{e}", exc_info=True)
 
 
 async def lingo_data(begin: str, end: str):
@@ -37,11 +41,11 @@ async def lingo_data(begin: str, end: str):
             if data['code'] == 200:
                 return data['data']
             else:
-                logging.info("Couldn't get the LingoAce data. Start again. Possibly token is invalid")
+                logger.info("Couldn't get the LingoAce data. Start again. Possibly token is invalid")
                 TEMP['token_lingo'] = None
                 return await lingo_data(begin, end)
         except Exception as e:
-            print('УПС! нет данных от lingo_data()', e) # logger
+            logger.exception(f'УПС! нет данных от lingo_data() {e}', exc_info=True)
 
 
 
@@ -58,7 +62,7 @@ async def get_token_QK():
                 token =  await resp.json()
                 TEMP['token_QK'] = token['access_token']
     except Exception as e:
-        logging.info(f"Не пришел токен get_token_QK(){resp}", e)
+        logger.exception(f"Не пришел токен get_token_QK(){resp}\n{e}", exc_info=True)
         TEMP['token_QK'] = False
         return False
 
@@ -85,5 +89,5 @@ async def qkid_data(begin: int, week=False):
                     TEMP['token_QK'] = None
                 return await qkid_data(begin, week)
     except Exception as e:
-        print(f' УПС! нет данных от qkid_data() {e}') # добавить в логгер
+        logger.exception(f' УПС! нет данных от qkid_data() {e}', exc_info=True)
         return False

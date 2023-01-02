@@ -17,9 +17,9 @@ import time as t
 
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", datefmt='%b-%d-%Y %I:%M:%S %p', level=logging.INFO
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('bot.py')
 
 
 DIR = pathlib.Path(__file__).parent.resolve()
@@ -65,22 +65,24 @@ async def processor(lingo_task, qkid_task, context, chat):
     try:
         lingo = await asyncio.wait_for(lingo_task, timeout=6)
     except asyncio.exceptions.TimeoutError:
-        print('Снимаю задачу LingoAce, тайм-аут') ## добавить logger
+        logger.exception('Снимаю задачу LingoAce, тайм-аут')
     try:
         qkid = await asyncio.wait_for(qkid_task, timeout=3)
     except asyncio.exceptions.TimeoutError:
-        print('Снимаю задачу QK') ## добавить logger
+        logger.exception('Снимаю задачу QK, тайм-аут')
 
     
     try:
         lingo = extract_data_lingoace(lingo)
     except Exception as e:
-        await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.') # logger
+        logger.exception(e, exc_info=True)
+        await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.')
         lingo = []
     try:
         qkid = extract_data_qkid(qkid)
     except Exception as e:
-        await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>QKid</b>.') # logger
+        logger.exception(e, exc_info=True)
+        await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>QKid</b>.')
         qkid = []
 
 
