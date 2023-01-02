@@ -1,6 +1,9 @@
 from dotenv import dotenv_values
 import aiohttp
 
+
+from util import async_timed
+
 import logging
 import pathlib
 import os
@@ -27,7 +30,7 @@ async def get_token_lingo():
     except Exception as e:
         logger.exception(f"Не пришел токен get_token_lingo(){resp}\n{e}", exc_info=True)
 
-
+@async_timed()
 async def lingo_data(begin: str, end: str):
     if  not TEMP['token_lingo']:
         await get_token_lingo()
@@ -66,7 +69,7 @@ async def get_token_QK():
         TEMP['token_QK'] = False
         return False
 
-
+@async_timed()
 async def qkid_data(begin: int, week=False):
     if TEMP['token_QK'] is None:
         await get_token_QK()

@@ -5,6 +5,7 @@ from telegram.ext import CommandHandler, ApplicationBuilder
 from web_apis import lingo_data, qkid_data
 from extract_data import extract_data_lingoace, extract_data_qkid
 from sort import quickort
+from util import async_timed
 
 
 import asyncio
@@ -91,7 +92,7 @@ async def processor(lingo_task, qkid_task, context, chat):
     message = output(sorted_data)
     await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=message)
      
-
+@async_timed()
 async def today(update, context):
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
@@ -104,7 +105,7 @@ async def today(update, context):
 
     await processor(lingo_task, qkid_task, context, chat)
 
-
+@async_timed()
 async def tomorrow(update, context):
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
@@ -118,7 +119,7 @@ async def tomorrow(update, context):
 
 
 
-
+@async_timed()
 async def week(update, context):
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
@@ -132,7 +133,7 @@ async def week(update, context):
 
     await processor(lingo_task, qkid_task, context, chat)
 
-
+@async_timed()
 async def next_week(update, context):
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
