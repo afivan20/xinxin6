@@ -13,7 +13,7 @@ def async_timed():
             try:
                 return await func(*args, **kwargs)
             finally:
-                logger.info(f"{func.__name__} завершилась за {time.time() - start} сек")
+                logger.info(f"{func.__name__} завершилась за {round(time.time() - start, 2)} сек")
         return wrapped
 
     return wrapper
