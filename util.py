@@ -1,6 +1,9 @@
 import functools
 import time
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 def async_timed():
     def wrapper(func):
@@ -10,7 +13,7 @@ def async_timed():
             try:
                 return await func(*args, **kwargs)
             finally:
-                print(f"{func} завершилась за {time.time() - start} сек")
+                logger.info(f"{func.__name__} завершилась за {time.time() - start} сек")
         return wrapped
 
     return wrapper
