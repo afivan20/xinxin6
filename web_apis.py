@@ -28,7 +28,7 @@ async def get_token_lingo():
                 token =  await resp.json()
                 TEMP['token_lingo'] = token['data']['jwtToken']
     except Exception as e:
-        logger.exception(f"Не пришел токен get_token_lingo(){resp}\n{e}", exc_info=True)
+        logger.exception(f"Не пришел токен get_token_lingo()\n{e}", exc_info=True)
 
 @async_timed()
 async def lingo_data(begin: str, end: str):
@@ -65,7 +65,7 @@ async def get_token_QK():
                 token =  await resp.json()
                 TEMP['token_QK'] = token['access_token']
     except Exception as e:
-        logger.exception(f"Не пришел токен get_token_QK(){resp}\n{e}", exc_info=True)
+        logger.exception(f"Не пришел токен get_token_QK()\n{e}", exc_info=True)
         TEMP['token_QK'] = False
         return False
 
