@@ -37,11 +37,11 @@ async def lingo_data(begin: str, end: str):
             if data['code'] == 200:
                 return data['data']
             else:
-                logging.info("Couldn't get the LingoAce data. Start again")
+                logging.info("Couldn't get the LingoAce data. Start again. Possibly token is invalid")
                 TEMP['token_lingo'] = None
                 return await lingo_data(begin, end)
         except Exception as e:
-            print('Exception from lingo_data()',e) # logger
+            print('УПС! нет данных от lingo_data()', e) # logger
 
 
 
@@ -58,7 +58,7 @@ async def get_token_QK():
                 token =  await resp.json()
                 TEMP['token_QK'] = token['access_token']
     except Exception as e:
-        logging.info("Couldn't get the QKid data. Start again")
+        logging.info(f"Не пришел токен get_token_QK(){resp}", e)
         TEMP['token_QK'] = False
         return False
 
@@ -81,9 +81,9 @@ async def qkid_data(begin: int, week=False):
                     data = await resp.json()
                     return data
                 else:
-                    print("We couldn't get the QK data, let's try again") # добавить в логгер
+                    print("Couldn't get the QK data. Start again. Possibly token is invalid")
                     TEMP['token_QK'] = None
                 return await qkid_data(begin, week)
     except Exception as e:
-        print(f' УПС! нет данных от QKID {e}') # добавить в логгер
+        print(f' УПС! нет данных от qkid_data() {e}') # добавить в логгер
         return False
