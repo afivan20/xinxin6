@@ -158,10 +158,10 @@ async def next_week(update, context):
 
 
 start_handler = CommandHandler('start', wake_up)
-today_handler = CommandHandler('today', today)
-tomorrow_handler = CommandHandler('tomorrow', tomorrow)
-week_handler = CommandHandler('week', week)
-next_week_handler = CommandHandler('next_week', next_week)
+today_handler = CommandHandler('today', today, block=False)
+tomorrow_handler = CommandHandler('tomorrow', tomorrow, block=False)
+week_handler = CommandHandler('week', week, block=False)
+next_week_handler = CommandHandler('next_week', next_week, block=False)
 
 
 
