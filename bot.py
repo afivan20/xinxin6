@@ -18,7 +18,7 @@ import time as t
 
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", datefmt='%b-%d-%Y %I:%M:%S %p', level=logging.INFO
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", datefmt='%b-%d-%Y %H:%M:%S %p', level=logging.INFO
 )
 logger = logging.getLogger('bot.py')
 
