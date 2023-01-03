@@ -66,19 +66,25 @@ async def processor(lingo_task, qkid_task, context, chat):
     try:
         lingo = await asyncio.wait_for(lingo_task, timeout=6)
     except asyncio.exceptions.TimeoutError:
-        logger.exception('Снимаю задачу LingoAce, тайм-аут')
+        logger.error('Снимаю задачу LingoAce, тайм-аут')
+        lingo = None
     try:
         qkid = await asyncio.wait_for(qkid_task, timeout=3)
     except asyncio.exceptions.TimeoutError:
         logger.exception('Снимаю задачу QK, тайм-аут')
 
     
-    try:
-        lingo = extract_data_lingoace(lingo)
-    except Exception as e:
-        logger.exception(e, exc_info=True)
+    
+    if lingo is None:
         await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.')
         lingo = []
+    else:
+        try:
+            lingo = extract_data_lingoace(lingo)
+        except Exception as e:
+            logger.exception(f"{e}\nlingo={repr(lingo)}", exc_info=True)
+            await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.')
+            lingo = []
     try:
         qkid = extract_data_qkid(qkid)
     except Exception as e:
