@@ -88,7 +88,7 @@ async def qkid_data(begin: int, week=False):
                     data = await resp.json()
                     return data
                 else:
-                    print("Couldn't get the QK data. Start again. Possibly token is invalid")
+                    logger.info("Couldn't get the QK data. Start again. Possibly token is invalid")
                     TEMP['token_QK'] = None
                 return await qkid_data(begin, week)
     except Exception as e:
