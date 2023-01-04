@@ -7,6 +7,8 @@ from util import async_timed
 import logging
 import pathlib
 import os
+
+
 DIR = pathlib.Path(__file__).parent.resolve()
 env = dotenv_values(os.path.join(DIR, '.env'))
 
@@ -14,7 +16,7 @@ TEMP = {'token_lingo': None, 'token_QK': None}
 
 logger = logging.getLogger(__name__)
 
-async def get_token_lingo(session: aiohttp.ClientSession):
+async def get_token_lingo(session: aiohttp.ClientSession) -> None:
     url = 'https://teacher.lingoace.com/api/user/login'
     payload = {
         'identify': env['login'],
@@ -30,7 +32,7 @@ async def get_token_lingo(session: aiohttp.ClientSession):
         logger.exception(f"Не пришел токен get_token_lingo()", exc_info=True)
 
 @async_timed()
-async def lingo_data(begin: str, end: str):
+async def fetch_lingo_data(begin: str, end: str) -> dict:
     async with aiohttp.ClientSession() as session:
         while not TEMP['token_lingo']:
             await get_token_lingo(session)
@@ -40,16 +42,16 @@ async def lingo_data(begin: str, end: str):
             async with session.get(url, ssl=False, headers=headers) as resp:
                 data = await resp.json()
             if data['code'] != 200:
-                logger.info(f"Couldn't get the LingoAce data. <{data['message']} {data['code']}> Start again.")
+                logger.info(f"Не пришли данные от LingoAce. Ответ и код:<{data['message']} {data['code']}> Пробуем ещё.")
                 TEMP['token_lingo'] = None
-                return await lingo_data(begin, end)
+                return await fetch_lingo_data(begin, end)
             return data['data']
         except Exception as e:
-            logger.exception(f'УПС! {lingo_data.__name__}:{e}', exc_info=True)
+            logger.exception(f'УПС! {fetch_lingo_data.__name__}:{e}', exc_info=True)
 
 
 
-async def get_token_QK():
+async def get_token_QK(session: aiohttp.ClientSession) -> None:
     url = 'https://gate.97kid.com/t/user/login'
     payload = {
         "installationJsVersion": env['version'],
@@ -57,37 +59,29 @@ async def get_token_QK():
         "username": env['qk_username']
     }
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, ssl=False) as resp:
-                token =  await resp.json()
-                TEMP['token_QK'] = token['access_token']
-    except Exception as e:
+        async with session.post(url, json=payload, ssl=False) as resp:
+            token =  await resp.json()
+            TEMP['token_QK'] = token['access_token']
+    except Exception:
         logger.exception(f"Не пришел токен get_token_QK()", exc_info=True)
-        TEMP['token_QK'] = False
-        return False
 
 @async_timed()
-async def qkid_data(begin: int, week=False):
-    if TEMP['token_QK'] is None:
-        await get_token_QK()
-    elif TEMP['token_QK'] == False:
-        return False
-    if week:
-        extra = 604800 
-    else:
-        extra = 86400 # a day
-    url = f'https://gate.97kid.com/t/calendars/my?beginAt={begin}&endAt={begin+extra}' 
-    headers = {"authorization": f"Bearer {TEMP['token_QK']}"}
-    try:
-        async with aiohttp.ClientSession() as session:
+async def fetch_qkid_data(begin: int, week: bool = False) -> list:
+    async with aiohttp.ClientSession() as session:
+        while TEMP['token_QK'] is None:
+            await get_token_QK(session)
+        if week: extra = 604800 
+        else: extra = 86400 # a day
+        url = f'https://gate.97kid.com/t/calendars/my?beginAt={begin}&endAt={begin+extra}' 
+        headers = {"authorization": f"Bearer {TEMP['token_QK']}"}
+        try:
             async with session.get(url, ssl=False, headers=headers) as resp:
+                data = await resp.json()
                 if resp.status == 200:
-                    data = await resp.json()
                     return data
                 else:
-                    logger.info("Couldn't get the QK data. Start again. Possibly token is invalid")
+                    logger.info(f"Не пришли данные от QKid. Ответ и код:<{data['message']} {data['code']} {resp.status}> Пробуем ещё.")
                     TEMP['token_QK'] = None
-                return await qkid_data(begin, week)
-    except Exception as e:
-        logger.exception(f' УПС! нет данных от qkid_data()', exc_info=True)
-        return False
+                return await fetch_qkid_data(begin, week)
+        except Exception:
+            logger.exception(f' УПС! нет данных от fetch_qkid_data()', exc_info=True)

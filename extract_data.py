@@ -1,7 +1,7 @@
 from datetime import datetime
 import time 
 
-def extract_data_lingoace(data):
+def extract_data_lingoace(data: dict) -> list:
     result = []
     for lesson in data['tutorTimetableList']:
         start_utc = lesson['startTime']
@@ -16,9 +16,8 @@ def extract_data_lingoace(data):
     return result
 
 
-def extract_data_qkid(data):
+def extract_data_qkid(data: list) -> list:
     result = []
-    # что если data пришли False, как отличить от пустого списка? []
     for lesson in data:
          if lesson['status'] == 0:
             start = lesson['beginAt']

@@ -1,4 +1,4 @@
-def quickort(array): 
+def quickort(array: list) -> list: 
     if len(array) < 2:
         return array
     else:

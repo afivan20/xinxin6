@@ -1,8 +1,9 @@
 from dotenv import dotenv_values
-from telegram.ext import CommandHandler, ApplicationBuilder
+from telegram import Update, Chat
+from telegram.ext import CommandHandler, ApplicationBuilder, ContextTypes
 
 
-from web_apis import lingo_data, qkid_data
+from web_apis import fetch_lingo_data, fetch_qkid_data
 from extract_data import extract_data_lingoace, extract_data_qkid
 from sort import quickort
 from util import async_timed
@@ -31,12 +32,12 @@ token = env['TOKEN']
 application = ApplicationBuilder().token(token).build()
 
 
-async def wake_up(update, context):
+async def wake_up(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     await context.bot.send_message(chat_id=chat.id,
                              text="today's schedule click 👉 /today \ntomorrow's schedule click 👉 /tomorrow \nthis week 👉 /week \nnext week 👉 /next_week")
 
-def output(data):
+def output(data: list) -> str:
     if len(data) == 0:
         return '<b>FREE TIME! ❤️ </b>'
     result = ''
@@ -62,7 +63,7 @@ def output(data):
     result += f'\n<b>TOTAL: {total}</b>'
     return result
 
-async def processor(lingo_task, qkid_task, context, chat):
+async def runner(lingo_task: asyncio.Task, qkid_task: asyncio.Task, context: ContextTypes.DEFAULT_TYPE, chat: Chat) -> None:
     try:
         lingo = await asyncio.wait_for(lingo_task, timeout=6)
     except asyncio.exceptions.TimeoutError:
@@ -72,26 +73,32 @@ async def processor(lingo_task, qkid_task, context, chat):
         qkid = await asyncio.wait_for(qkid_task, timeout=3)
     except asyncio.exceptions.TimeoutError:
         logger.exception('Снимаю задачу QK, тайм-аут')
+        qkid = None
 
     
     
-    if lingo is None:
-        await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.')
-        lingo = []
-    else:
+    if not lingo is None:
         try:
             lingo = extract_data_lingoace(lingo)
         except Exception as e:
             logger.exception(f"{e}\nlingo={repr(lingo)}", exc_info=True)
             await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.')
             lingo = []
-    try:
-        qkid = extract_data_qkid(qkid)
-    except Exception as e:
-        logger.exception(e, exc_info=True)
+    else:
+        await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>LingoAce</b>.')
+        lingo = []
+
+    if not qkid is None:
+        try:
+            qkid = extract_data_qkid(qkid)
+        except Exception as e:
+            logger.exception(f"{e}\nqkid={repr(qkid)}", exc_info=True)
+            await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>QKid</b>.')
+            qkid = []
+    else:
         await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=f'Can not read data from <b>QKid</b>.')
         qkid = []
-
+   
 
     data = lingo + qkid
     sorted_data = quickort(data)
@@ -99,34 +106,34 @@ async def processor(lingo_task, qkid_task, context, chat):
     await context.bot.send_message(chat_id=chat.id, parse_mode ='HTML', text=message)
      
 @async_timed()
-async def today(update, context):
+async def today(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
     begin = datetime.combine(today_utc - timedelta(days=1), time(21, 00, tzinfo=timezone.utc))
     unix_today = int(t.mktime(begin.now(tz=ZoneInfo('Europe/Moscow')).date().timetuple()))
 
 
-    lingo_task = asyncio.create_task(lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
-    qkid_task = asyncio.create_task(qkid_data(unix_today))
+    lingo_task = asyncio.create_task(fetch_lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
+    qkid_task = asyncio.create_task(fetch_qkid_data(unix_today))
 
-    await processor(lingo_task, qkid_task, context, chat)
+    await runner(lingo_task, qkid_task, context, chat)
 
 @async_timed()
-async def tomorrow(update, context):
+async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
     begin = datetime.combine(today_utc, time(21, 00, tzinfo=timezone.utc))
     unix_tomorrow = int(t.mktime((today_utc.date() + timedelta(days=1)).timetuple()))
 
-    lingo_task = asyncio.create_task(lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
-    qkid_task = asyncio.create_task(qkid_data(unix_tomorrow))
+    lingo_task = asyncio.create_task(fetch_lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=1)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
+    qkid_task = asyncio.create_task(fetch_qkid_data(unix_tomorrow))
 
-    await processor(lingo_task, qkid_task, context, chat)
+    await runner(lingo_task, qkid_task, context, chat)
 
 
 
 @async_timed()
-async def week(update, context):
+async def week(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
     since_monday = (today_utc - timedelta(days=(today_utc.weekday()+1))).date()
@@ -134,23 +141,23 @@ async def week(update, context):
     from_monday = (today_utc - timedelta(days=today_utc.weekday())).date()
     unix_week = int(t.mktime(from_monday.timetuple()))
 
-    lingo_task = asyncio.create_task(lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
-    qkid_task = asyncio.create_task(qkid_data(unix_week, week=True))
+    lingo_task = asyncio.create_task(fetch_lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
+    qkid_task = asyncio.create_task(fetch_qkid_data(unix_week, week=True))
 
-    await processor(lingo_task, qkid_task, context, chat)
+    await runner(lingo_task, qkid_task, context, chat)
 
 @async_timed()
-async def next_week(update, context):
+async def next_week(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     today_utc = datetime.now(tz=ZoneInfo('Europe/Moscow'))
     next_monday = ((today_utc - timedelta(days=(today_utc.weekday()+1))) + timedelta(days=7)).date()
     begin = datetime.combine(next_monday, time(21, 00, tzinfo=timezone.utc))
     unix_next_week = int(t.mktime((next_monday).timetuple()))
 
-    lingo_task = asyncio.create_task(lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
-    qkid_task = asyncio.create_task(qkid_data(unix_next_week, week=True))
+    lingo_task = asyncio.create_task(fetch_lingo_data(begin.strftime('%Y-%m-%dT%H:%M:%S.000Z'), (begin+timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%S.000Z')))
+    qkid_task = asyncio.create_task(fetch_qkid_data(unix_next_week, week=True))
 
-    await processor(lingo_task, qkid_task, context, chat)
+    await runner(lingo_task, qkid_task, context, chat)
 
 
 
