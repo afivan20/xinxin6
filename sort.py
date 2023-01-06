@@ -1,5 +1,4 @@
-
-def quickort(array): 
+def quickort(array: list) -> list: 
     if len(array) < 2:
         return array
     else:
@@ -7,5 +6,3 @@ def quickort(array):
         less = [i for i in array[1:] if i['start'] < pivot['start']]
         greater = [i for i in array[1:] if i['start'] >= pivot['start']]
         return quickort(less) + [pivot] + quickort(greater)
-
-
